@@ -70,5 +70,5 @@ def main(query, force_refresh):
         line = '{} ({})\n    {}'.format(
             click.style(p.name, bold=True, fg="green"),
             click.style(p.attribute, dim=True),
-            click.style(p.description))
+            click.style(p.description.replace("\n", "\n    ")))
         click.echo(line)
