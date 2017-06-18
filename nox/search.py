@@ -56,7 +56,8 @@ def all_packages(force_refresh=False):
 @click.command()
 @click.argument('queries', nargs=-1)
 @click.option('--force-refresh', is_flag=True)
-def main(queries, force_refresh):
+@click.option('--interactive', '-i', is_flag=True)
+def main(queries, force_refresh, interactive):
     """Search a package in nix"""
     patterns = [re.compile(query, re.IGNORECASE) for query in queries]
 
@@ -66,9 +67,37 @@ def main(queries, force_refresh):
     except NixEvalError:
         raise click.ClickException('An error occured while running nix (displayed above). Maybe the nixpkgs eval is broken.')
     results.sort()
-    for p in results:
-        line = '{} ({})\n    {}'.format(
-            click.style(p.name, bold=True, fg="green"),
-            click.style(p.attribute, dim=True),
-            click.style(p.description.replace("\n", "\n    ")))
-        click.echo(line)
+    if interactive:
+        for n, p in enumerate(results, start=1):
+            line = '{} {} ({})\n    {}'.format(
+                click.style(str(n), bold=True, bg="yellow", fg="black"),
+                click.style(p.name, bold=True, fg="green"),
+                click.style(p.attribute, dim=True),
+                click.style(p.description.replace("\n", "\n    ")))
+            click.echo(line)
+        if results:
+            def parse_input(inp):
+                if inp[0] == 's':
+                    action = 'shell'
+                    inp = inp[1:]
+                else:
+                    action = 'install'
+                packages = [results[int(i) - 1] for i in inp.split()]
+                return action, packages
+
+            action, packages = click.prompt('Packages to install',
+                                            value_proc=parse_input)
+            attributes = [p.attribute for p in packages]
+            print(attributes)
+            if action == 'install':
+                subprocess.check_call(['nix-env', '-iA', '--show-trace'] + attributes)
+            elif action == 'shell':
+                attributes = [a[a.find('.')+1:] if a.find('.') != -1 else a for a in attributes]
+                subprocess.check_call(['nix-shell', '-p', '--show-trace'] + attributes)
+    else:
+        for p in results:
+            line = '{} ({})\n    {}'.format(
+                click.style(p.name, bold=True, fg="green"),
+                click.style(p.attribute, dim=True),
+                click.style(p.description.replace("\n", "\n    ")))
+            click.echo(line)
