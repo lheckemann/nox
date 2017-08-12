@@ -63,8 +63,8 @@ def main(queries, force_refresh):
     try:
         results = [p for p in all_packages(force_refresh)
                    if any((all((pat.search(s) for pat in patterns)) for s in p))]
-    except NixEvalError:
-        raise click.ClickException('An error occured while running nix (displayed above). Maybe the nixpkgs eval is broken.')
+    except NixEvalError as e:
+        raise click.ClickException('An error occured while running nix (displayed above). Maybe the nixpkgs eval is broken.') from e
     results.sort()
     for p in results:
         line = '{} ({})\n    {}'.format(
